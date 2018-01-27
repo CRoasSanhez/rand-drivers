@@ -1,0 +1,123 @@
+<html>
+    <head>
+        <style>
+            #map {
+                height: 400px;
+                width: 100%;
+            }
+        </style>
+        <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
+    </head>
+   <body>
+      
+
+  <div class="row container">
+      <form class="col s12" action="/map" method="post">
+        <div class="row">
+          <div class="input-field col s6">
+            <input id="drivers" type="number" class="validate" name="drivers">
+            <label for="drivers">Drivers</label>
+          </div>
+          <div class="input-field col s6">
+            <input id="users" type="number" class="validate" name="users">
+            <label for="users">Users</label>
+          </div>
+        </div>
+        
+        <div class="row">
+          <input id="search" class="btn" type="submit" value="seach" />
+        </div>
+      </form>
+    </div>
+          
+      
+      <div class="map-container container">
+            <div id="map"></div>
+      </div>
+
+      <div class="hide">
+          <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+          <script type="text/javascript" src="js/materialize.min.js"></script>
+      </div>
+      
+      <script>
+          // initialize map
+          var 
+          map, marker,directionsDisplay, directionsService;
+
+          function initMap() {
+
+            // Set polyline options
+            var lineSymbol = {
+              path: google.maps.SymbolPath.CIRCLE,
+              fillOpacity: 1,
+              scale: 3
+            };
+      
+            
+            var polylineDotted = {
+              strokeColor: '#0eb7f6',
+              strokeOpacity: 0,
+              fillOpacity: 0,
+              icons: [{
+                  icon: lineSymbol,
+                  offset: '0',
+                  repeat: '10px'
+              }],
+            };
+
+            // Set render options for lines
+            var rendererOptions = {
+                map: map,
+                suppressMarkers: false,
+                polylineOptions: polylineDotted
+            };
+            
+            var uluru = {lat: 19.410672, lng: -99.16078};
+            directionsDisplay = new google.maps.DirectionsRenderer({rendererOptions });
+            directionsService = new google.maps.DirectionsService;
+
+            map = new google.maps.Map(document.getElementById('map'), {
+              zoom: 17,
+              center: uluru
+            });
+            marker = new google.maps.Marker({
+              position: uluru,
+              map: map
+            });
+
+            directionsDisplay.setMap(map);
+
+            $("#search").on("click",function(){
+              //calculateAndDisplayRoute(directionsService, directionsDisplay);
+              return true;
+            })  
+
+
+          }
+
+          function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+
+            directionsService.route({
+              origin: {lat: 19.409505, lng: -99.166293 },
+              destination: {lat: 19.408513, lng:-99.165982 },
+              travelMode: google.maps.DirectionsTravelMode.DRIVING,
+            }, function(response, status) {
+              if (status == 'OK') {
+                console.log("success")
+                directionsDisplay.setDirections(response);
+              } else {
+              
+                window.alert('Directions request failed due to ' + status);
+              }
+            });
+        }
+            
+      </script>
+      <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDI8Osr696gx40sqjWaNg9f6EDvcFLgYGQ&callback=initMap">
+      </script>
+
+   </body>
+</html>
+

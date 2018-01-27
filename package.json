@@ -1,0 +1,23 @@
+{
+  "name": "rand-drivers",
+  "version": "1.0.0",
+  "description": "random drivers",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CRoasSanhez/rand-drivers.git"
+  },
+  "author": "Cesar A Rosas Sanchez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CRoasSanhez/rand-drivers/issues"
+  },
+  "homepage": "https://github.com/CRoasSanhez/rand-drivers#readme",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.2"
+  }
+}
