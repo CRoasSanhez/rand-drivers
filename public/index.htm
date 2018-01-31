@@ -2,59 +2,93 @@
     <head>
         <style>
             #map {
-                height: 400px;
+                height: 500px;
                 width: 100%;
+            }
+            i.dir_car{
+              color: red;
+            }
+            i.dir_user{
+              color: green;
             }
         </style>
         <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     </head>
-   <body>
-      
+  <body>
 
-  <div class="row container">
-      <form class="col s12" action="/map" method="post">
-        <div class="row">
-          <div class="input-field col s6">
-            <input id="drivers" type="number" class="validate" name="drivers">
-            <label for="drivers">Drivers</label>
+    <div class="row container">
+        <form id="general" class="col s12" action="/map" method="post">
+          <div class="row">
+            <div class="input-field col s6">
+              <i class="dir_car material-icons prefix">directions_car</i>
+              <input id="drivers" type="number" class="validate" name="drivers" max="5">
+              <label for="drivers">Drivers</label>
+            </div>
+            <div class="input-field col s6">
+              <i class="dir_user material-icons prefix">directions_walk</i>
+              <input id="users" type="number" class="validate" name="users" max="5">
+              <label for="users">Users</label>
+            </div>
           </div>
-          <div class="input-field col s6">
-            <input id="users" type="number" class="validate" name="users">
-            <label for="users">Users</label>
-          </div>
-        </div>
-        
-        <div class="row">
-          <input id="search" class="btn" type="submit" value="seach" />
-        </div>
-      </form>
-    </div>
           
-      
-      <div class="map-container container">
-            <div id="map"></div>
-      </div>
+          <div class="row">
+            <input id="search" class="btn" type="" value="create" />
+          </div>
+        </form>
+    </div>
+            
+    <div class="map-container container">
+          <div id="map"></div>
+    </div>
 
-      <div class="hide">
-          <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-          <script type="text/javascript" src="js/materialize.min.js"></script>
-      </div>
+    <div class="hide">
+        <script async defer
+          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDI8Osr696gx40sqjWaNg9f6EDvcFLgYGQ&callback=initMap">
+        </script>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+        <script type="text/javascript" src="js/materialize.min.js"></script>
+    </div>
       
       <script>
-          // initialize map
+          // Global variables
           var 
-          map, marker,directionsDisplay, directionsService;
+          _drivers = $("#drivers"), _users=$("#users"),
+          map,arrMarkersDriver=[], arrMarkersUsers=[], arrDirectionDisplay=[] ,directionsDisplay, directionsService, rendererOptions,
+          centerCoords = {lat: 19.410672, lng: -99.16078}, range = 0.002,
+          sqareCoords = (centerCoords.lat + range) + "," + (centerCoords.lng + range) + "|" + (centerCoords.lat + range) + ","+ (centerCoords.lng-range) + "|"
+                            + (centerCoords.lat-range) + "," + (centerCoords.lng + range) + "|" + (centerCoords.lat - range) + ","+ (centerCoords.lng-range);
+          var arrUsers = [], arrDrivers = [];
+
+          // Handle number on users selection
+          _users.on("change",function(){
+            if( $(this).val($(this).val()>$(this).attr("max")?$(this).attr("max"):$(this).val()), _drivers.val()<_users.val()){
+              _drivers.val(_users.val())
+            }
+          });
+          _drivers.on("change",function(){
+            $(this).val($(this).val()>$(this).attr("max")?$(this).attr("max"):$(this).val())
+          });
+
+          // Draws in map a marker based on the given type and coordinates
+          function drawMarker(lat,lng, type){
+            var marker = new google.maps.Marker({
+              position: {lat: lat, lng: lng},
+              map: map,
+              icon: type==="user"?'http://maps.google.com/mapfiles/ms/icons/green-dot.png':'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+            });
+            return marker;
+          }
 
           function initMap() {
 
-            // Set polyline options
+            // initialize map polyline attributes
             var lineSymbol = {
               path: google.maps.SymbolPath.CIRCLE,
               fillOpacity: 1,
               scale: 3
             };
       
-            
             var polylineDotted = {
               strokeColor: '#0eb7f6',
               strokeOpacity: 0,
@@ -67,57 +101,237 @@
             };
 
             // Set render options for lines
-            var rendererOptions = {
+            rendererOptions = {
                 map: map,
                 suppressMarkers: false,
                 polylineOptions: polylineDotted
             };
             
-            var uluru = {lat: 19.410672, lng: -99.16078};
-            directionsDisplay = new google.maps.DirectionsRenderer({rendererOptions });
-            directionsService = new google.maps.DirectionsService;
+            //directionsDisplay = new google.maps.DirectionsRenderer({rendererOptions });
+            //directionsService = new google.maps.DirectionsService;
 
             map = new google.maps.Map(document.getElementById('map'), {
               zoom: 17,
-              center: uluru
+              center: centerCoords
             });
-            marker = new google.maps.Marker({
-              position: uluru,
-              map: map
-            });
+          
+            function createUsersAndDrivers(){
 
-            directionsDisplay.setMap(map);
+              $.ajax({
+                url: "/map", method: "post", async:false, data: $("#general").serializeArray(),
+                success: function (resp) {
+                    if (resp.success){
+                      console.log("Users and drivers created!")
+                    }
+                },
+                error: function (err) {
+                  console.log(err)
+                },
+              }); // end ajax
+            }
 
             $("#search").on("click",function(){
-              //calculateAndDisplayRoute(directionsService, directionsDisplay);
-              return true;
-            })  
 
+              // create users and drivers on server
+              clearMarkers(),createUsersAndDrivers(),
 
+              // Draw users and drivers in map
+              setRandomCoords(_users.val(),arrUsers, "user"),setRandomCoords(_drivers.val(),arrDrivers, "driver");
+
+              // calculate closest driver to user
+              for(var i=0; i<arrUsers.length; i++){
+                  arrUsers[i].id = i+1;
+                  arrUsers[i].driver = getClosestDriver(arrUsers[i]);
+                }
+              
+                setTimeout(function(){
+                  removeUsersPin(); removeSelectedDrivers();
+                  for(var i=0; i<arrUsers.length; i++){
+                    var directionsDisplay = new google.maps.DirectionsRenderer({rendererOptions });
+                    var directionsService = new google.maps.DirectionsService;
+                    arrDirectionDisplay.push(directionsDisplay);
+                    calculateAndDisplayRoute([arrUsers[i].coords.lat,arrUsers[i].coords.lng], arrUsers[i].driver.coords, directionsDisplay, directionsService );
+                  }
+                },1800)
+              
+            return false;
+            }); // end submit
+          } // END initMap function
+
+          // clear markers in map
+          function clearMarkers(){
+
+            // remove users markers
+            removeDriversPin(); removeUsersPin();
+
+            // remove directions routes
+            for(var i=0;i<arrDirectionDisplay.length;i++){
+              arrDirectionDisplay[i].setMap(null);
+            }
           }
 
-          function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+          //function calculateAndDisplayRoute(directionsService, directionsDisplay) {
+          // origin [lat,lng]
+          // destination [lat,lng]
+          function calculateAndDisplayRoute(origin, destination, dirDisplay, dirService){
 
-            directionsService.route({
-              origin: {lat: 19.409505, lng: -99.166293 },
-              destination: {lat: 19.408513, lng:-99.165982 },
+            console.log("\norigin: "+origin + "\ndest: "+destination)
+
+            dirService.route({
+              origin: {lat: origin[0], lng: origin[1] },
+              destination: {lat: destination[0], lng: destination[1] },
               travelMode: google.maps.DirectionsTravelMode.DRIVING,
             }, function(response, status) {
               if (status == 'OK') {
-                console.log("success")
-                directionsDisplay.setDirections(response);
+                dirDisplay.setMap(map);
+                console.log(response)
+                var path = google.maps.geometry.encoding.decodePath(response.routes[0].legs[0].steps[0].encoded_lat_lngs)
+                console.log(path[0].lat())
+                console.log(path[0].lng())
+                dirDisplay.setDirections(response);
               } else {
-              
                 window.alert('Directions request failed due to ' + status);
               }
             });
         }
+
+        // draw random users an drivers pins in map according to the given type
+        function setRandomCoords(num,arr,type){
+          var randCoord;
+
+          for(var i =0; i<num;i++){
+            arr[i]={}; 
+            randCoord = {lat: (Math.random() * range)+ 0.00001, lng: (Math.random() * range)+ 0.00001};
+            if(randCoord.lat.toString()[7] % 2 == 0){
+              randCoord.lat *= -1;
+            }
+            if(randCoord.lng.toString()[7] % 2 == 0){
+              randCoord.lng *= -1;
+            }
+            arr[i].coords = {lat: (centerCoords.lat + randCoord.lat) , lng: (centerCoords.lng + randCoord.lng)};
+            if(type == "user"){
+              arrMarkersUsers.push( drawMarker(arr[i].coords.lat, arr[i].coords.lng, type) );
+              updateClientPosition(i+1,false);
+            }else{
+              arrMarkersDriver.push( drawMarker(arr[i].coords.lat, arr[i].coords.lng, type) );
+              arrMarkersDriver[i].idDriver = i+1; // for search improvemtn
+              updateDriverPosition(i+1,false);
+            }
+            
+          } // end for
+        }
+
+        // PENDING Create timers to update client and user positions
+        function initIntervals(){
+          var clientPos = setInterval(updateClientPosition, 3000,true);
+          var driverPos = setInterval(updateDriverPosition, 3000,true);
+        }
+
+        // request the closest driver near user coordinates and assign it to user object
+        function getClosestDriver(user){
+          $.ajax({
+                url: "/users/"+user.id+"/driver",
+                method: "post",
+                beforeSend: function(xhr){
+                  xhr.setRequestHeader("Content-Type","application/json");
+                },
+                data: JSON.stringify({coords: [user.coords.lat, user.coords.lng]}),
+                success: function (resp) {
+                  if(resp = JSON.parse(resp), resp.success)
+                    user.driver = resp.data;
+
+                    //calculateAndDisplayRoute(directionsService, directionsDisplay);
+                },
+                error: function (err) {
+                  console.log(err)
+                },
+              }); // end ajax
+        }
+
+        // PENDING
+        function getNearestRoads(){
+          $.ajax({
+            url: "https://roads.googleapis.com/v1/nearestRoads?points="+sqareCoords+"&key=AIzaSyDI8Osr696gx40sqjWaNg9f6EDvcFLgYGQ",
+            method: "get",
+            beforeSend: function(request) {
+                //For JWT implementation or internationalization
+            },
+            success: function (resp) {
+              console.log(resp)
+            },
+            error: function (err) {
+              console.log(err)
+            },
+          }); // end ajax
+        }
+
+        // updates the users position in server
+        function updateClientPosition(id,sync){
+          $.ajax({
+            url: "/users/coords/"+id,
+            method: "patch",
+            async: sync,
+            data: JSON.stringify({coords: arrUsers[id-1].coords}),
+            beforeSend: function(xhr){
+              xhr.setRequestHeader("Content-Type","application/json");
+            },
+            success: function (resp) {
+              resp = JSON.parse(resp)
+              console.log(resp.data)
+            },
+            error: function (err) {
+              console.log(err)
+            },
+          }); // end ajax
+        }
+
+        // updates the drivers position in server
+        function updateDriverPosition(id,sync){
+          console.log("updating drivers position")
+          $.ajax({
+            url: "/drivers/coords/"+id,
+            method: "patch",
+            async: sync,
+            data: JSON.stringify({coords: arrDrivers[id-1].coords}),
+            beforeSend: function(xhr){
+              xhr.setRequestHeader("Content-Type","application/json");
+            },
+            success: function (resp) {
+              resp = JSON.parse(resp)
+              console.log(resp.data)
+            },
+            error: function (err) {
+              console.log(err)
+            },
+          }); // end ajax
+        }
+
+        // remove users pin from map
+        function removeUsersPin(){
+          for(var i=0; i < arrMarkersUsers.length; i++){
+              arrMarkersUsers[i].setMap(null);
+            }
+        }
+
+        // removes drivers pins from map
+        function removeDriversPin(){
+          for(var i=0; i < arrMarkersDriver.length; i++){
+            arrMarkersDriver[i].setMap(null);
+            }
+        }
+
+        function removeSelectedDrivers(){
+
+          // find drivers Ids to remove
+          for(var i= 0;i<arrUsers.length;i++)
+            for(var j=0;j<arrMarkersDriver.length;j++){
+              if(arrMarkersDriver[j].idDriver == arrUsers[i].driver.id)
+                arrMarkersDriver[j].setMap(null);
+            }
+          
+        }
             
       </script>
-      <script async defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDI8Osr696gx40sqjWaNg9f6EDvcFLgYGQ&callback=initMap">
-      </script>
-
    </body>
 </html>
 

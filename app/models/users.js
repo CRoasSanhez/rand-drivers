@@ -1,10 +1,11 @@
-var util = require("../util/util")
+var util = require("../util/util");
 var fs = require("fs");
 
 var User = {
     name : "user_",
     id: 0,
     coords: [ 19.410672, -99.16078 ],
+    status: "init",
 
     getUsers : function(){
         var data = fs.readFileSync( "./app/json/users/users.json", 'utf8')
@@ -13,7 +14,9 @@ var User = {
 }
 
 exports.getUser = function(id){
-
+    var users = User.getUsers();
+    var uid = "user_"+id
+    return users[uid];
 }
 
 exports.createUsers = function(num){
